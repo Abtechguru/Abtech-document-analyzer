@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./backend:/app
+      - ./backend/.env:/app/.env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+  celery-worker:
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    command: watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- celery -A app.worker.celery_app worker --loglevel=debug -Q document_processing
+
+  # Add development tools
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: docanalyzer-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - docanalyzer-network
